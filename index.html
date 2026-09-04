@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Poker - ADRIAN</title>
+<title>Poker Chaco - Maquinita</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=VT323&family=Oswald:wght@400;600&display=swap" rel="stylesheet">
 <style>
@@ -272,9 +272,12 @@
 <body>
 
 <div class="cabinet">
-  <div class="marquee">POKER <span>ADRIAN</span></div>
+  <div class="marquee">POKER <span>CHACO</span></div>
 
   <div id="gameScreen" style="display:block;">
+    <div style="display:flex;justify-content:flex-end;margin:-4px 2px 6px;">
+      <button class="bet-btn" id="muteBtn" title="Sonido">🔊</button>
+    </div>
     <div class="felt">
       <div class="screen"><p id="messageBox">Presioná JUGAR para repartir</p></div>
 
@@ -342,6 +345,48 @@ const PAY = {
   'Nada':0
 };
 const PAY_ORDER = Object.keys(PAY);
+
+let muted = false;
+let audioCtx = null;
+function getCtx(){
+  if(!audioCtx){
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if(audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+function tone(freq, start, dur, type, vol){
+  if(muted) return;
+  try{
+    const ctx = getCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type || 'sine';
+    osc.frequency.value = freq;
+    const t0 = ctx.currentTime + start;
+    gain.gain.setValueAtTime(vol || 0.2, t0);
+    gain.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(t0);
+    osc.stop(t0 + dur + 0.02);
+  }catch(e){ /* audio not available, ignore */ }
+}
+const Sound = {
+  click(){ tone(600,0,0.05,'square',0.15); },
+  hold(){ tone(880,0,0.06,'square',0.12); },
+  deal(){ for(let i=0;i<5;i++){ tone(320+i*24,i*0.045,0.05,'triangle',0.12); } },
+  win(){ [523,659,784,1047].forEach((f,i)=>tone(f,i*0.09,0.15,'sine',0.2)); },
+  bigWin(){ [523,659,784,1047,1319,1568].forEach((f,i)=>tone(f,i*0.08,0.2,'sine',0.25)); },
+  lose(){ tone(220,0,0.2,'sawtooth',0.13); tone(180,0.15,0.25,'sawtooth',0.13); },
+  coin(){ tone(1200,0,0.05,'square',0.15); tone(1600,0.05,0.05,'square',0.15); },
+  doubleWin(){ [660,880,1100].forEach((f,i)=>tone(f,i*0.07,0.12,'triangle',0.2)); },
+  doubleLose(){ tone(150,0,0.35,'sawtooth',0.18); },
+  tie(){ tone(440,0,0.1,'sine',0.15); tone(440,0.14,0.1,'sine',0.15); }
+};
+document.getElementById('muteBtn').addEventListener('click', ()=>{
+  muted = !muted;
+  document.getElementById('muteBtn').textContent = muted ? '🔇' : '🔊';
+});
 
 let currentUser = null;
 let credits = 0;
@@ -426,6 +471,7 @@ function renderCards(){
     if(stage==='draw'){
       slot.addEventListener('click', ()=>{
         c.held = !c.held;
+        Sound.hold();
         renderCards();
       });
     }
@@ -490,9 +536,11 @@ function handleGuess(choice){
   }
 
   if(result==='tie'){
+    Sound.tie();
     setMessage('Empate. Se repite la doblada, no perdés nada.');
     setTimeout(startDoubleRound, 1000);
   } else if(result==='win'){
+    Sound.doubleWin();
     pendingWin *= 2;
     doubleRound++;
     if(doubleRound>=MAX_DOUBLE){
@@ -513,6 +561,7 @@ function handleGuess(choice){
       }, 1000);
     }
   } else {
+    Sound.doubleLose();
     setMessage('Perdiste la doblada. Suerte a la próxima.');
     pendingWin = 0;
     setTimeout(()=>{
@@ -556,10 +605,10 @@ function updateBetButtons(){
 }
 
 document.getElementById('betDown').addEventListener('click', ()=>{
-  if(bet>1){ bet--; updateBetDisplay(); }
+  if(bet>1){ bet--; Sound.click(); updateBetDisplay(); }
 });
 document.getElementById('betUp').addEventListener('click', ()=>{
-  if(bet<5){ bet++; updateBetDisplay(); }
+  if(bet<5){ bet++; Sound.click(); updateBetDisplay(); }
 });
 
 document.getElementById('dealBtn').addEventListener('click', ()=>{
@@ -573,6 +622,7 @@ document.getElementById('dealBtn').addEventListener('click', ()=>{
   hand = deck.splice(0,5).map(c=>({...c, held:false}));
   stage = 'draw';
   renderCards();
+  Sound.deal();
   setMessage('Elegí las cartas a MANTENER y presioná DESCARTAR');
   document.getElementById('dealBtn').disabled = true;
   document.getElementById('drawBtn').disabled = false;
@@ -588,15 +638,18 @@ document.getElementById('drawBtn').addEventListener('click', ()=>{
   }
   stage = 'result';
   renderCards();
+  Sound.deal();
   const handName = evaluateHand(hand);
   const win = payoutFor(handName, bet);
   document.getElementById('drawBtn').disabled = true;
   stage = 'idle';
   if(win>0){
     setMessage(`${handName.toUpperCase()} - GANASTE ${win} CRÉDITOS. ¿Cobrás o doblás?`);
+    if(win >= bet*20) Sound.bigWin(); else Sound.win();
     offerDouble(win);
   } else {
     setMessage(`${handName.toUpperCase()} - Sin premio. ¡Suerte a la próxima!`);
+    Sound.lose();
     document.getElementById('dealBtn').disabled = false;
     updateBetButtons();
     saveCredits();
@@ -606,6 +659,7 @@ document.getElementById('drawBtn').addEventListener('click', ()=>{
 document.getElementById('cobrarBtn').addEventListener('click', ()=>{
   credits += pendingWin;
   pendingWin = 0;
+  Sound.coin();
   updateCreditsDisplay();
   hideDoubleUI();
   setMessage('Cobraste tu premio. Presioná JUGAR para repartir de nuevo.');
@@ -613,9 +667,9 @@ document.getElementById('cobrarBtn').addEventListener('click', ()=>{
   updateBetButtons();
   saveCredits();
 });
-document.getElementById('doblarBtn').addEventListener('click', startDoubleRound);
-document.getElementById('altaBtn').addEventListener('click', ()=>handleGuess('alta'));
-document.getElementById('bajaBtn').addEventListener('click', ()=>handleGuess('baja'));
+document.getElementById('doblarBtn').addEventListener('click', ()=>{ Sound.click(); startDoubleRound(); });
+document.getElementById('altaBtn').addEventListener('click', ()=>{ Sound.click(); handleGuess('alta'); });
+document.getElementById('bajaBtn').addEventListener('click', ()=>{ Sound.click(); handleGuess('baja'); });
 
 credits = 100;
 bet = 1;
