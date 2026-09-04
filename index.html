@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Poker - EL NEGRO DAVID ES GAY</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=VT323&family=Oswald:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --wood-dark:#2c1a0e;
+    --wood:#5c3a21;
+    --wood-light:#7a4f2b;
+    --felt:#0b3d2e;
+    --felt-dark:#082720;
+    --gold:#d4af37;
+    --gold-bright:#f1d27a;
+    --cream:#f3e9d2;
+    --led-bg:#150502;
+    --led-red:#ff3b30;
+    --led-amber:#ffb400;
+    --suit-red:#c0392b;
+    --suit-black:#1c1c1c;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    min-height:100vh;
+    background:radial-gradient(circle at 50% 0%, #1a1a1a, #050505 70%);
+    font-family:'Oswald',sans-serif;
+    color:var(--cream);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px 12px;
+  }
+  .cabinet{
+    width:100%;
+    max-width:640px;
+    background:linear-gradient(180deg,var(--wood-light),var(--wood) 40%,var(--wood-dark));
+    border-radius:18px;
+    padding:18px;
+    box-shadow:0 20px 60px rgba(0,0,0,0.6), inset 0 0 0 4px var(--wood-dark);
+  }
+  .marquee{
+    text-align:center;
+    font-family:'Anton',sans-serif;
+    letter-spacing:2px;
+    font-size:clamp(28px,6vw,42px);
+    color:var(--gold-bright);
+    text-shadow:0 0 12px rgba(212,175,55,0.5), 2px 2px 0 #000;
+    margin:4px 0 14px;
+  }
+  .marquee span{color:var(--suit-red);}
+  .felt{
+    background:radial-gradient(ellipse at 50% 20%, var(--felt), var(--felt-dark));
+    border-radius:12px;
+    padding:20px 14px;
+    border:6px solid var(--wood-dark);
+    box-shadow:inset 0 0 30px rgba(0,0,0,0.6);
+  }
+  .screen{
+    background:var(--led-bg);
+    border-radius:8px;
+    padding:14px;
+    margin-bottom:16px;
+    border:2px solid #000;
+    min-height:64px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+  }
+  .screen p{
+    font-family:'VT323',monospace;
+    font-size:22px;
+    color:var(--led-amber);
+    letter-spacing:1px;
+    margin:0;
+    line-height:1.3;
+    text-shadow:0 0 6px rgba(255,180,0,0.6);
+  }
+  .cards-row{
+    display:flex;
+    gap:8px;
+    justify-content:center;
+    margin-bottom:10px;
+  }
+  .card-slot{
+    flex:1;
+    max-width:100px;
+    aspect-ratio:2.4/3.4;
+    background:#fff;
+    border-radius:8px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    position:relative;
+    cursor:default;
+    border:3px solid #ccc;
+    transition:transform 0.15s, border-color 0.15s;
+    user-select:none;
+  }
+  .card-slot.empty{
+    background:rgba(255,255,255,0.06);
+    border:3px dashed rgba(255,255,255,0.15);
+  }
+  .card-slot.held{
+    border-color:var(--gold-bright);
+    transform:translateY(-8px);
+    box-shadow:0 0 14px rgba(241,210,122,0.7);
+    cursor:pointer;
+  }
+  .card-slot.holdable{cursor:pointer;}
+  .card-rank{
+    font-family:'Oswald',sans-serif;
+    font-weight:600;
+    font-size:clamp(18px,5vw,26px);
+    line-height:1;
+  }
+  .card-suit{
+    font-size:clamp(20px,6vw,30px);
+    line-height:1;
+    margin-top:2px;
+  }
+  .card-red{color:var(--suit-red);}
+  .card-black{color:var(--suit-black);}
+  .hold-label{
+    position:absolute;
+    bottom:-22px;
+    left:0;right:0;
+    text-align:center;
+    font-family:'Anton',sans-serif;
+    font-size:12px;
+    letter-spacing:1px;
+    color:var(--gold-bright);
+    opacity:0;
+    transition:opacity 0.15s;
+  }
+  .card-slot.held .hold-label{opacity:1;}
+  .holds-spacer{height:22px;}
+  .paytable{
+    font-family:'VT323',monospace;
+    font-size:16px;
+    color:var(--gold-bright);
+    background:rgba(0,0,0,0.25);
+    border-radius:6px;
+    padding:8px 10px;
+    margin-top:8px;
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:2px 10px;
+  }
+  .paytable .hi{color:#fff;}
+  .controls{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    align-items:center;
+    justify-content:center;
+    margin-top:16px;
+  }
+  .btn{
+    font-family:'Anton',sans-serif;
+    letter-spacing:1px;
+    font-size:15px;
+    padding:12px 18px;
+    border-radius:50px;
+    border:2px solid var(--gold);
+    background:linear-gradient(180deg,#3a2413,#1c1108);
+    color:var(--gold-bright);
+    cursor:pointer;
+    transition:transform 0.1s, background 0.15s;
+  }
+  .btn:hover:not(:disabled){background:linear-gradient(180deg,#4a2e18,#2a1a0d);}
+  .btn:active:not(:disabled){transform:scale(0.96);}
+  .btn:disabled{opacity:0.35;cursor:not-allowed;}
+  .btn-primary{
+    background:linear-gradient(180deg,var(--gold-bright),var(--gold));
+    color:#241705;
+    border-color:#8a6d1e;
+  }
+  .btn-primary:hover:not(:disabled){background:linear-gradient(180deg,#f7dd93,#c99f2e);}
+  .bet-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-family:'VT323',monospace;
+    font-size:18px;
+    color:var(--gold-bright);
+  }
+  .bet-btn{
+    width:34px;height:34px;
+    border-radius:50%;
+    border:2px solid var(--gold);
+    background:#1c1108;
+    color:var(--gold-bright);
+    font-size:18px;
+    cursor:pointer;
+  }
+  .bet-btn:disabled{opacity:0.3;cursor:not-allowed;}
+  .topbar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:8px;
+    font-family:'VT323',monospace;
+    font-size:18px;
+    color:var(--cream);
+  }
+  .logout{
+    background:none;border:none;color:var(--suit-red);
+    font-family:'Oswald',sans-serif;font-size:13px;
+    text-decoration:underline;cursor:pointer;
+  }
+  .auth-wrap{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    max-width:320px;
+    margin:0 auto;
+  }
+  .auth-wrap input{
+    height:40px;
+    border-radius:6px;
+    border:2px solid var(--gold);
+    background:#0e0906;
+    color:var(--cream);
+    font-family:'Oswald',sans-serif;
+    font-size:15px;
+    padding:0 12px;
+  }
+  .auth-tabs{
+    display:flex;
+    gap:6px;
+    margin-bottom:6px;
+  }
+  .auth-tab{
+    flex:1;
+    text-align:center;
+    padding:8px;
+    font-family:'Anton',sans-serif;
+    letter-spacing:1px;
+    font-size:14px;
+    border-radius:6px;
+    cursor:pointer;
+    background:rgba(0,0,0,0.3);
+    color:var(--cream);
+    opacity:0.6;
+  }
+  .auth-tab.active{
+    background:linear-gradient(180deg,var(--gold-bright),var(--gold));
+    color:#241705;
+    opacity:1;
+  }
+  .auth-error{
+    color:var(--suit-red);
+    font-family:'VT323',monospace;
+    font-size:16px;
+    min-height:18px;
+    text-align:center;
+  }
+  .hint{
+    text-align:center;
+    font-size:12px;
+    color:rgba(243,233,210,0.5);
+    margin-top:10px;
+  }
+</style>
+</head>
+<body>
+
+<div class="cabinet">
+  <div class="marquee">POKER <span>EL NEGRO DAVID ES GAY</span></div>
+
+  <div id="gameScreen" style="display:block;">
+    <div class="felt">
+      <div class="screen"><p id="messageBox">Presioná JUGAR para repartir</p></div>
+
+      <div class="cards-row" id="cardsRow"></div>
+      <div class="holds-spacer"></div>
+
+      <div class="paytable" id="paytable"></div>
+
+      <div class="cards-row" id="doubleRow" style="display:none; max-width:220px; margin:14px auto 6px;">
+        <div class="card-slot" id="dCard1"></div>
+        <div class="card-slot" id="dCard2"></div>
+      </div>
+      <div class="controls" id="doubleControls" style="display:none;">
+        <button class="btn btn-primary" id="cobrarBtn">COBRAR</button>
+        <button class="btn" id="doblarBtn">DOBLAR</button>
+      </div>
+      <div class="controls" id="guessControls" style="display:none;">
+        <button class="btn" id="altaBtn">ALTA</button>
+        <button class="btn" id="bajaBtn">BAJA</button>
+      </div>
+
+      <div class="controls">
+        <div class="bet-row">
+          <span>CRÉDITOS: <span id="creditsOut">0</span></span>
+        </div>
+      </div>
+      <div class="controls">
+        <div class="bet-row">
+          APUESTA
+          <button class="bet-btn" id="betDown">-</button>
+          <span id="betOut">1</span>
+          <button class="bet-btn" id="betUp">+</button>
+        </div>
+      </div>
+      <div class="controls">
+        <button class="btn" id="drawBtn" disabled>DESCARTAR</button>
+        <button class="btn btn-primary" id="dealBtn">JUGAR</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUITS = [
+  {sym:'♠', color:'card-black'},
+  {sym:'♥', color:'card-red'},
+  {sym:'♦', color:'card-red'},
+  {sym:'♣', color:'card-black'}
+];
+const RANKS = [
+  {label:'2',val:2},{label:'3',val:3},{label:'4',val:4},{label:'5',val:5},
+  {label:'6',val:6},{label:'7',val:7},{label:'8',val:8},{label:'9',val:9},
+  {label:'10',val:10},{label:'J',val:11},{label:'Q',val:12},{label:'K',val:13},{label:'A',val:14}
+];
+const PAY = {
+  'Escalera Real':250,
+  'Escalera de Color':50,
+  'Poker':25,
+  'Full':9,
+  'Color':6,
+  'Escalera':4,
+  'Trio':3,
+  'Doble Pareja':2,
+  'Pareja de Jotas o Mejor':1,
+  'Nada':0
+};
+const PAY_ORDER = Object.keys(PAY);
+
+let currentUser = null;
+let credits = 0;
+let bet = 1;
+let deck = [];
+let hand = [];
+let stage = 'idle';
+
+function buildDeck(){
+  const d = [];
+  for(const s of SUITS){
+    for(const r of RANKS){
+      d.push({suit:s.sym, color:s.color, rank:r.label, value:r.val});
+    }
+  }
+  for(let i=d.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [d[i],d[j]]=[d[j],d[i]];
+  }
+  return d;
+}
+
+function evaluateHand(cards){
+  const values = cards.map(c=>c.value).sort((a,b)=>a-b);
+  const suit0 = cards[0].suit;
+  const isFlush = cards.every(c=>c.suit===suit0);
+  let isStraight = values.every((v,i)=> i===0 || v===values[i-1]+1);
+  let aceLow = false;
+  if(!isStraight && values.join(',')==='2,3,4,5,14'){
+    isStraight = true;
+    aceLow = true;
+  }
+  const counts = {};
+  values.forEach(v=>counts[v]=(counts[v]||0)+1);
+  const countVals = Object.values(counts).sort((a,b)=>b-a);
+  const pairRanks = Object.keys(counts).filter(k=>counts[k]===2).map(Number);
+
+  if(isFlush && isStraight && !aceLow && values[0]===10) return 'Escalera Real';
+  if(isFlush && isStraight) return 'Escalera de Color';
+  if(countVals[0]===4) return 'Poker';
+  if(countVals[0]===3 && countVals[1]===2) return 'Full';
+  if(isFlush) return 'Color';
+  if(isStraight) return 'Escalera';
+  if(countVals[0]===3) return 'Trio';
+  if(countVals[0]===2 && countVals[1]===2) return 'Doble Pareja';
+  if(countVals[0]===2 && pairRanks[0]>=11) return 'Pareja de Jotas o Mejor';
+  return 'Nada';
+}
+
+function payoutFor(handName, betAmount){
+  if(handName==='Escalera Real' && betAmount===5) return 4000;
+  return PAY[handName]*betAmount;
+}
+
+function renderPaytable(){
+  const el = document.getElementById('paytable');
+  el.innerHTML = PAY_ORDER.filter(n=>n!=='Nada').map(name=>{
+    const val = name==='Escalera Real' && bet===5 ? 4000 : PAY[name]*bet;
+    return `<div>${name}</div><div class="hi">${val}</div>`;
+  }).join('');
+}
+
+function cardFaceHTML(c){
+  return `<div class="card-rank ${c.color}">${c.rank}</div><div class="card-suit ${c.color}">${c.suit}</div>`;
+}
+
+function renderCards(){
+  const row = document.getElementById('cardsRow');
+  row.innerHTML = '';
+  for(let i=0;i<5;i++){
+    const c = hand[i];
+    const slot = document.createElement('div');
+    slot.className = 'card-slot';
+    if(!c){
+      slot.classList.add('empty');
+      row.appendChild(slot);
+      continue;
+    }
+    if(stage==='draw') slot.classList.add('holdable');
+    if(c.held) slot.classList.add('held');
+    slot.innerHTML = cardFaceHTML(c) + '<div class="hold-label">MANTENER</div>';
+    if(stage==='draw'){
+      slot.addEventListener('click', ()=>{
+        c.held = !c.held;
+        renderCards();
+      });
+    }
+    row.appendChild(slot);
+  }
+}
+
+let pendingWin = 0;
+let doubleDeck = [];
+let doubleRound = 0;
+let dBaseCard = null;
+const MAX_DOUBLE = 5;
+
+function hideDoubleUI(){
+  document.getElementById('doubleRow').style.display = 'none';
+  document.getElementById('doubleControls').style.display = 'none';
+  document.getElementById('guessControls').style.display = 'none';
+  const d1 = document.getElementById('dCard1');
+  const d2 = document.getElementById('dCard2');
+  d1.className = 'card-slot'; d1.innerHTML = '';
+  d2.className = 'card-slot'; d2.innerHTML = '';
+}
+
+function offerDouble(win){
+  pendingWin = win;
+  doubleRound = 0;
+  document.getElementById('dealBtn').disabled = true;
+  document.getElementById('drawBtn').disabled = true;
+  document.getElementById('doubleControls').style.display = 'flex';
+  updateBetButtons();
+}
+
+function startDoubleRound(){
+  document.getElementById('doubleControls').style.display = 'none';
+  doubleDeck = buildDeck();
+  dBaseCard = doubleDeck.shift();
+  document.getElementById('doubleRow').style.display = 'flex';
+  const d1 = document.getElementById('dCard1');
+  d1.className = 'card-slot';
+  d1.innerHTML = cardFaceHTML(dBaseCard);
+  const d2 = document.getElementById('dCard2');
+  d2.className = 'card-slot empty';
+  d2.innerHTML = '';
+  document.getElementById('guessControls').style.display = 'flex';
+  setMessage(`Carta base: ${dBaseCard.rank}${dBaseCard.suit}. ¿La próxima es ALTA o BAJA?`);
+}
+
+function handleGuess(choice){
+  document.getElementById('guessControls').style.display = 'none';
+  const c2 = doubleDeck.shift();
+  const d2 = document.getElementById('dCard2');
+  d2.className = 'card-slot';
+  d2.innerHTML = cardFaceHTML(c2);
+
+  let result;
+  if(c2.value === dBaseCard.value){
+    result = 'tie';
+  } else if(choice==='alta'){
+    result = c2.value > dBaseCard.value ? 'win' : 'lose';
+  } else {
+    result = c2.value < dBaseCard.value ? 'win' : 'lose';
+  }
+
+  if(result==='tie'){
+    setMessage('Empate. Se repite la doblada, no perdés nada.');
+    setTimeout(startDoubleRound, 1000);
+  } else if(result==='win'){
+    pendingWin *= 2;
+    doubleRound++;
+    if(doubleRound>=MAX_DOUBLE){
+      setMessage(`¡Ganaste! Llegaste al máximo de dobladas. Se acreditan ${pendingWin} créditos.`);
+      setTimeout(()=>{
+        credits += pendingWin;
+        pendingWin = 0;
+        updateCreditsDisplay();
+        hideDoubleUI();
+        document.getElementById('dealBtn').disabled = false;
+        updateBetButtons();
+        saveCredits();
+      }, 1000);
+    } else {
+      setMessage(`¡Ganaste! Ahora tenés ${pendingWin} créditos en juego. ¿Cobrás o doblás de nuevo?`);
+      setTimeout(()=>{
+        document.getElementById('doubleControls').style.display = 'flex';
+      }, 1000);
+    }
+  } else {
+    setMessage('Perdiste la doblada. Suerte a la próxima.');
+    pendingWin = 0;
+    setTimeout(()=>{
+      hideDoubleUI();
+      document.getElementById('dealBtn').disabled = false;
+      updateBetButtons();
+      saveCredits();
+    }, 1000);
+  }
+}
+
+function setMessage(msg){
+  document.getElementById('messageBox').textContent = msg;
+}
+
+function updateCreditsDisplay(){
+  document.getElementById('creditsOut').textContent = credits;
+}
+
+function updateBetDisplay(){
+  document.getElementById('betOut').textContent = bet;
+  renderPaytable();
+}
+
+async function saveCredits(){
+  return;
+}
+
+function resetHandUI(){
+  hand = [];
+  stage = 'idle';
+  renderCards();
+  document.getElementById('dealBtn').disabled = false;
+  document.getElementById('drawBtn').disabled = true;
+}
+
+function updateBetButtons(){
+  const locked = stage==='draw' || pendingWin>0;
+  document.getElementById('betDown').disabled = bet<=1 || locked;
+  document.getElementById('betUp').disabled = bet>=5 || locked;
+}
+
+document.getElementById('betDown').addEventListener('click', ()=>{
+  if(bet>1){ bet--; updateBetDisplay(); }
+});
+document.getElementById('betUp').addEventListener('click', ()=>{
+  if(bet<5){ bet++; updateBetDisplay(); }
+});
+
+document.getElementById('dealBtn').addEventListener('click', ()=>{
+  if(credits<bet){
+    setMessage('Créditos insuficientes. Bajá la apuesta.');
+    return;
+  }
+  credits -= bet;
+  updateCreditsDisplay();
+  deck = buildDeck();
+  hand = deck.splice(0,5).map(c=>({...c, held:false}));
+  stage = 'draw';
+  renderCards();
+  setMessage('Elegí las cartas a MANTENER y presioná DESCARTAR');
+  document.getElementById('dealBtn').disabled = true;
+  document.getElementById('drawBtn').disabled = false;
+  updateBetButtons();
+  saveCredits();
+});
+
+document.getElementById('drawBtn').addEventListener('click', ()=>{
+  for(let i=0;i<5;i++){
+    if(!hand[i].held){
+      hand[i] = {...deck.shift(), held:false};
+    }
+  }
+  stage = 'result';
+  renderCards();
+  const handName = evaluateHand(hand);
+  const win = payoutFor(handName, bet);
+  document.getElementById('drawBtn').disabled = true;
+  stage = 'idle';
+  if(win>0){
+    setMessage(`${handName.toUpperCase()} - GANASTE ${win} CRÉDITOS. ¿Cobrás o doblás?`);
+    offerDouble(win);
+  } else {
+    setMessage(`${handName.toUpperCase()} - Sin premio. ¡Suerte a la próxima!`);
+    document.getElementById('dealBtn').disabled = false;
+    updateBetButtons();
+    saveCredits();
+  }
+});
+
+document.getElementById('cobrarBtn').addEventListener('click', ()=>{
+  credits += pendingWin;
+  pendingWin = 0;
+  updateCreditsDisplay();
+  hideDoubleUI();
+  setMessage('Cobraste tu premio. Presioná JUGAR para repartir de nuevo.');
+  document.getElementById('dealBtn').disabled = false;
+  updateBetButtons();
+  saveCredits();
+});
+document.getElementById('doblarBtn').addEventListener('click', startDoubleRound);
+document.getElementById('altaBtn').addEventListener('click', ()=>handleGuess('alta'));
+document.getElementById('bajaBtn').addEventListener('click', ()=>handleGuess('baja'));
+
+credits = 100;
+bet = 1;
+updateCreditsDisplay();
+updateBetDisplay();
+updateBetButtons();
+resetHandUI();
+setMessage('Presioná JUGAR para repartir');
+</script>
+
+</body>
+</html>
