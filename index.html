@@ -274,35 +274,7 @@
 <div class="cabinet">
   <div class="marquee">POKER <span>CHACO</span></div>
 
-  <div id="authScreen">
-    <div class="felt">
-      <div class="auth-tabs">
-        <div class="auth-tab active" id="tabLogin">Ingresar</div>
-        <div class="auth-tab" id="tabRegister">Crear cuenta</div>
-      </div>
-      <div class="auth-wrap">
-        <input id="authUser" type="text" placeholder="Usuario" autocomplete="username">
-        <input id="authPass" type="password" placeholder="Contraseña" autocomplete="current-password">
-        <button class="btn btn-primary" id="authSubmit">Ingresar</button>
-        <p class="auth-error" id="authError"></p>
-      </div>
-      <p class="hint">Los créditos de cada jugador se guardan en un archivo JSON.</p>
-      <div class="controls" style="margin-top:10px;">
-        <button class="btn" id="exportBtn">⬇️ Descargar respaldo</button>
-        <button class="btn" id="importBtn">⬆️ Cargar respaldo</button>
-        <input type="file" id="importFile" accept="application/json" style="display:none;">
-      </div>
-    </div>
-  </div>
-
-  <div id="gameScreen" style="display:none;">
-    <div class="topbar">
-      <span id="userLabel">Jugador</span>
-      <div>
-        <button class="logout" id="exportBtn2" style="margin-right:14px;">Guardar JSON</button>
-        <button class="logout" id="logoutBtn">Salir</button>
-      </div>
-    </div>
+  <div id="gameScreen" style="display:block;">
     <div style="display:flex;justify-content:flex-end;margin:-4px 2px 6px;">
       <button class="bet-btn" id="muteBtn" title="Sonido">🔊</button>
     </div>
@@ -347,7 +319,6 @@
     </div>
   </div>
 </div>
-
 
 <script>
 const SUITS = [
@@ -615,59 +586,8 @@ function updateBetDisplay(){
   renderPaytable();
 }
 
-let participants = {};
-
-async function loadParticipants(){
-  try{
-    if(window.storage){
-      const rec = await window.storage.get('participants', true);
-      if(rec) participants = JSON.parse(rec.value);
-    }
-  }catch(e){ /* sin datos guardados todavía */ }
-}
-
-async function persistParticipants(){
-  try{
-    if(window.storage){
-      await window.storage.set('participants', JSON.stringify(participants), true);
-    }
-  }catch(e){ /* seguimos igual, el jugador puede descargar el respaldo a mano */ }
-}
-
 async function saveCredits(){
-  if(!currentUser) return;
-  if(!participants[currentUser]) participants[currentUser] = {password:'', credits:0};
-  participants[currentUser].credits = credits;
-  await persistParticipants();
-}
-
-function downloadParticipantsJSON(){
-  const blob = new Blob([JSON.stringify(participants, null, 2)], {type:'application/json'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'poker-chaco-participantes.json';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-
-function handleImportFile(file){
-  const reader = new FileReader();
-  reader.onload = async (e)=>{
-    try{
-      const data = JSON.parse(e.target.result);
-      participants = {...participants, ...data};
-      await persistParticipants();
-      document.getElementById('authError').style.color = 'var(--gold-bright)';
-      document.getElementById('authError').textContent = 'Respaldo cargado. Ya podés ingresar.';
-    }catch(err){
-      document.getElementById('authError').style.color = 'var(--suit-red)';
-      document.getElementById('authError').textContent = 'El archivo no es un respaldo válido.';
-    }
-  };
-  reader.readAsText(file);
+  return;
 }
 
 function resetHandUI(){
@@ -751,88 +671,13 @@ document.getElementById('doblarBtn').addEventListener('click', ()=>{ Sound.click
 document.getElementById('altaBtn').addEventListener('click', ()=>{ Sound.click(); handleGuess('alta'); });
 document.getElementById('bajaBtn').addEventListener('click', ()=>{ Sound.click(); handleGuess('baja'); });
 
-document.getElementById('exportBtn').addEventListener('click', downloadParticipantsJSON);
-document.getElementById('exportBtn2').addEventListener('click', downloadParticipantsJSON);
-document.getElementById('importBtn').addEventListener('click', ()=>{
-  document.getElementById('importFile').click();
-});
-document.getElementById('importFile').addEventListener('change', (e)=>{
-  if(e.target.files[0]) handleImportFile(e.target.files[0]);
-});
-
-document.getElementById('logoutBtn').addEventListener('click', async ()=>{
-  await saveCredits();
-  currentUser = null;
-  document.getElementById('gameScreen').style.display = 'none';
-  document.getElementById('authScreen').style.display = 'block';
-  document.getElementById('authUser').value = '';
-  document.getElementById('authPass').value = '';
-  document.getElementById('authError').textContent = '';
-});
-
-let authMode = 'login';
-document.getElementById('tabLogin').addEventListener('click', ()=>{
-  authMode = 'login';
-  document.getElementById('tabLogin').classList.add('active');
-  document.getElementById('tabRegister').classList.remove('active');
-  document.getElementById('authSubmit').textContent = 'Ingresar';
-  document.getElementById('authError').textContent = '';
-});
-document.getElementById('tabRegister').addEventListener('click', ()=>{
-  authMode = 'register';
-  document.getElementById('tabRegister').classList.add('active');
-  document.getElementById('tabLogin').classList.remove('active');
-  document.getElementById('authSubmit').textContent = 'Crear cuenta';
-  document.getElementById('authError').textContent = '';
-});
-
-document.getElementById('authSubmit').addEventListener('click', async ()=>{
-  const user = document.getElementById('authUser').value.trim();
-  const pass = document.getElementById('authPass').value;
-  const errEl = document.getElementById('authError');
-  errEl.style.color = 'var(--suit-red)';
-  errEl.textContent = '';
-  if(!user || !pass){
-    errEl.textContent = 'Completá usuario y contraseña.';
-    return;
-  }
-  if(authMode==='register'){
-    if(participants[user]){
-      errEl.textContent = 'Ese usuario ya existe.';
-      return;
-    }
-    participants[user] = {password:pass, credits:100};
-    await persistParticipants();
-    startGame(user, 100);
-  } else {
-    const data = participants[user];
-    if(!data){
-      errEl.textContent = 'Usuario no encontrado. Creá una cuenta o cargá tu respaldo.';
-      return;
-    }
-    if(data.password !== pass){
-      errEl.textContent = 'Contraseña incorrecta.';
-      return;
-    }
-    startGame(user, data.credits);
-  }
-});
-
-function startGame(user, startCredits){
-  currentUser = user;
-  credits = startCredits;
-  bet = 1;
-  document.getElementById('userLabel').textContent = user;
-  document.getElementById('authScreen').style.display = 'none';
-  document.getElementById('gameScreen').style.display = 'block';
-  updateCreditsDisplay();
-  updateBetDisplay();
-  updateBetButtons();
-  resetHandUI();
-  setMessage('Presioná JUGAR para repartir');
-}
-
-loadParticipants();
+credits = 100;
+bet = 1;
+updateCreditsDisplay();
+updateBetDisplay();
+updateBetButtons();
+resetHandUI();
+setMessage('Presioná JUGAR para repartir');
 </script>
 
 </body>
